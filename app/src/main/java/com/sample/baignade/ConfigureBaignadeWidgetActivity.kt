@@ -29,6 +29,10 @@ import kotlin.concurrent.timer
 
 class ConfigureBaignadeWidgetActivity : AppCompatActivity() {
     companion object {
+        private const val EXTRA_APPWIDGET_ID_CUSTOM =
+            "appWidgetIdCustom"
+        private const val EXTRA_APPWIDGET_IS_UPDATE =
+            "appWidgetIsUpdate"
         private const val USER_AGENT =
             "Baignade Widget App, Developer is Scott Hamilton <sgn.hamilton+baignade@protonmail.com>"
         private val START_POINT = GeoPoint(48.783, -3.033)
@@ -61,6 +65,7 @@ class ConfigureBaignadeWidgetActivity : AppCompatActivity() {
         }
     }
     private var mAppWidgetId: Int = AppWidgetManager.INVALID_APPWIDGET_ID
+    private var mActionIsUpdate = false
     private lateinit var map: MapView
     private var mMarkersCount = 0
     private var mMarkersCountMutex = Mutex(false)
@@ -79,13 +84,24 @@ class ConfigureBaignadeWidgetActivity : AppCompatActivity() {
             return true
         }
     }
+//
+//    override fun onNewIntent(intent: Intent?) {
+//        println("NEW INTENT: $intent, extras: ${intent?.extras}")
+//        super.onNewIntent(intent)
+//    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         intent.extras?.also {
-            mAppWidgetId = it.getInt(
-                AppWidgetManager.EXTRA_APPWIDGET_ID,
-                AppWidgetManager.INVALID_APPWIDGET_ID
-            )
+            mAppWidgetId =
+                it.getInt(
+                    if (it.containsKey(EXTRA_APPWIDGET_ID_CUSTOM))
+                        { EXTRA_APPWIDGET_ID_CUSTOM }
+                    else { AppWidgetManager.EXTRA_APPWIDGET_ID},
+                    AppWidgetManager.INVALID_APPWIDGET_ID
+                )
+            mActionIsUpdate = it.getBoolean(EXTRA_APPWIDGET_IS_UPDATE)
+            println("IS UPDATE: ${it.getBoolean(EXTRA_APPWIDGET_IS_UPDATE)}")
+            println("INTENT mAppWidgetId: $mAppWidgetId")
         }
         setContentView(R.layout.activity_configure_baignade_widget)
         Configuration.getInstance().userAgentValue = USER_AGENT
@@ -107,7 +123,9 @@ class ConfigureBaignadeWidgetActivity : AppCompatActivity() {
                 updatePorts()
             }
         })
+
         if (mAppWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
+            println("INVALID intent: $mAppWidgetId")
             setResult(RESULT_OK, Intent())
             finish()
         }
@@ -149,9 +167,10 @@ class ConfigureBaignadeWidgetActivity : AppCompatActivity() {
         }
     }
     private fun addMarker(map: MapView?, point: GeoPoint, title: String) {
-        if (map == null) {
+        if (isFinishing || map == null || map?.repository == null) {
             return
         }
+        println("Map: $map, map repo: ${map.repository}")
         val marker = Marker(map)
         marker.position = point
         marker.title = title
@@ -194,5 +213,22 @@ class ConfigureBaignadeWidgetActivity : AppCompatActivity() {
                 mMarkersCountMutex.unlock()
             }
         }
+    }
+
+    override fun onDestroy() {
+        if (mActionIsUpdate) {
+            val appWidgetManager = AppWidgetManager.getInstance(this)
+            thread {
+                CoroutineScope(Dispatchers.Default).launch {
+                    BaignadeWidgetProvider.updateAppWidget(
+                        this@ConfigureBaignadeWidgetActivity,
+                        appWidgetManager,
+                        mAppWidgetId,
+//                        usePreviousDataIfAvailable =  true
+                    )
+                }
+            }
+        }
+        super.onDestroy()
     }
 }
