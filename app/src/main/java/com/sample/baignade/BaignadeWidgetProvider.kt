@@ -2,6 +2,7 @@ package com.sample.baignade
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetManager.ACTION_APPWIDGET_CONFIGURE
 import android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID
 import android.appwidget.AppWidgetProvider
 import android.content.Context
@@ -9,6 +10,8 @@ import android.content.Intent
 import android.graphics.Color
 import android.os.Build
 import android.util.DisplayMetrics
+import android.util.TypedValue
+import android.util.TypedValue.COMPLEX_UNIT_DIP
 import android.view.LayoutInflater
 import android.widget.RemoteViews
 import androidx.core.graphics.drawable.toBitmap
@@ -25,10 +28,13 @@ import org.osmdroid.util.GeoPoint
 import java.util.*
 import kotlin.concurrent.thread
 import kotlin.math.absoluteValue
-import android.appwidget.AppWidgetManager.ACTION_APPWIDGET_CONFIGURE
 
 class BaignadeWidgetProvider : AppWidgetProvider() {
     companion object {
+        fun dpToPix(context: Context, value: Float): Float {
+            val metrics: DisplayMetrics = context.resources.displayMetrics
+            return TypedValue.applyDimension(COMPLEX_UNIT_DIP, value, metrics)
+        }
         private fun setOpenConfigureOnClick(context: Context,
                                     appWidgetId: Int) {
             val intent = Intent(context, ConfigureBaignadeWidgetActivity::class.java).apply {
@@ -96,9 +102,9 @@ class BaignadeWidgetProvider : AppWidgetProvider() {
                                  waterTemperatureInDegrees: Int,
                                  coefMin: Int,
                                  coefMax: Int) {
-
-            val w = 670
-            val h = 600
+            val metrics: DisplayMetrics = context.resources.displayMetrics
+            val w = dpToPix(context, 335F)
+            val h = dpToPix(context, 300F)
 
             val view = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 context.getSystemService(LayoutInflater::class.java).
@@ -109,7 +115,6 @@ class BaignadeWidgetProvider : AppWidgetProvider() {
             if (view == null) {
                 return
             }
-
             val points: XYSerie = xVals.zip(yVals)
             val (sinusoidXVals, sinusoidYVals) = SinusoidBuilder(points).getSinusoidal().unzip()
             val graph: LineGraph = view.findViewById(R.id.graph)
@@ -149,7 +154,7 @@ class BaignadeWidgetProvider : AppWidgetProvider() {
             graph.addLine(line)
             graph.addLine(levelLine)
 
-            graph.layout(0, 0, w, h)
+            graph.layout(0, 0, w.toInt(), h.toInt())
             val bitmapImage = graph.drawToBitmap()
 
             val remoteViews: RemoteViews = RemoteViews(
