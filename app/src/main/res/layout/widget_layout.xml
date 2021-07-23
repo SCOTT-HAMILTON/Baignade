@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <com.velli20.materialunixgraph.LineGraph
+        android:id="@+id/graph"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:paddingLeft="0dp"
+
+        app:drawTimeLabelsIn24hourMode="true"
+        app:graphFrameColor="#e0e0e0"
+        app:verticalAxisLabelColor="#efefef"
+        app:horizontalAxisLabelColor="#efefef"
+        app:verticalAxisLabelTextSize="12sp"
+        app:horizontalAxisLabelTextSize="14sp"
+        app:maxVerticalAxisValue="120"
+        app:minVerticalAxisValue="0"
+        app:maxVerticalAxisCount="4"
+        app:verticalAxisValueLabel="@string/verticalAxisUnitLabelText"
+        app:dialogOutlineColor="#000000"
+        app:dialogBackgroundColor="#FFFFFF"
+        app:linePointRadius="3dp"
+        app:lineTouchedPointRadius="6dp"
+        app:drawLineTouchedPointIndicatorLine="true"
+        app:lineTouchedPointColor="#00b0ff"
+        app:lineTouchedPointIndicatorLineColor="#000000"
+        />
+</androidx.constraintlayout.widget.ConstraintLayout>

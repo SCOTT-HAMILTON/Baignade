@@ -1,0 +1,75 @@
+plugins {
+    id 'com.android.application'
+    id 'kotlin-android'
+    id 'kotlinx-serialization'
+}
+
+android {
+    signingConfigs {
+        debug {
+            storeFile file('/home/scott/Android/release-2-keystore.jks')
+            storePassword 'cqjscqjnsr'
+            keyAlias 'upload'
+            keyPassword 'cqjscqjnsr'
+        }
+        release {
+            storeFile file('/home/scott/Android/release-2-keystore.jks')
+            storePassword 'cqjscqjnsr'
+            keyAlias 'upload'
+            keyPassword 'cqjscqjnsr'
+        }
+    }
+    compileSdkVersion 30
+    buildToolsVersion "30.0.3"
+
+    defaultConfig {
+        applicationId "com.sample.baignade"
+        minSdkVersion 19
+        targetSdkVersion 30
+        versionCode 1
+        versionName "1.0"
+//        multiDexEnabled true
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        signingConfig signingConfigs.release
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+//    packagingOptions {
+//        exclude 'META-INF/DEPENDENCIES'
+//    }
+}
+
+dependencies {
+
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    implementation 'androidx.core:core-ktx:1.6.0'
+    implementation 'androidx.appcompat:appcompat:1.3.0'
+    implementation 'com.google.android.material:material:1.4.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.2"
+    def kotlinx_coroutines = "1.5.1"
+    def osmdroid = "6.1.10"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coroutines"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$kotlinx_coroutines"
+    implementation "org.osmdroid:osmdroid-android:$osmdroid"
+    implementation 'com.github.MKergall:osmbonuspack:6.7.0'
+
+    implementation project(":Material-Graph-Library")
+
+    testImplementation 'junit:junit:4.+'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.3'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
+}

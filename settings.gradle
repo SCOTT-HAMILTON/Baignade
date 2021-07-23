@@ -1,0 +1,5 @@
+rootProject.name = "Baignade"
+include ':app'
+include ':Material-Graph-Library'
+project(':Material-Graph-Library').projectDir = new File(rootDir, 'app/libs/Material-Graph-Library/Library')
+

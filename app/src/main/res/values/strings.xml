@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Baignade</string>
+    <string name="graph_image_content_description">Graph</string>
+    <string name="default_port_name">Unknown</string>
+    <string name="verticalAxisUnitLabelText">meters</string>
+    <string name="graphTitle">Tides Infos</string>
+    <string name="data_credits_text">Thanks to SHOM©</string>
+    <string name="alert_choose_port_title">Do you want to choose this port ?</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+</resources>

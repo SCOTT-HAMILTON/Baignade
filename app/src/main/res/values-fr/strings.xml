@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Baignade</string>
+    <string name="graph_image_content_description">Graph</string>
+    <string name="default_port_name">Port Inconnu</string>
+    <string name="verticalAxisUnitLabelText">mètres</string>
+    <string name="graphTitle">Marées Infos</string>
+    <string name="data_credits_text">Merci à la SHOM©</string>
+    <string name="alert_choose_port_title">Voulez-vous choisir ce port ?</string>
+    <string name="yes">Oui</string>
+    <string name="no">Non</string>
+</resources>
