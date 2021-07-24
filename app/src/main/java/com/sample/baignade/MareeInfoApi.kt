@@ -16,36 +16,27 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
 
-
-@Serializable
-data class PortInfoEtale(val datetime: String, val hauteur: Float, val type_etale: String, val coef: Int = -1)
-@Serializable
-data class PortInfoMaree(val datetime: String, val lieu: String, val etales: List<PortInfoEtale>)
-@Serializable
-data class PortInfoPrevisDetail(val teau: Int)
-@Serializable
-data class PortInfoPrevis(val detail: List<PortInfoPrevisDetail>)
-@Serializable
-data class PortInfoContenu(val marees: List<PortInfoMaree>, val previs: PortInfoPrevis)
-@Serializable
-data class PortInfo(val contenu: PortInfoContenu)
-
-@Serializable
-data class PortListPort(val nom: String, val lat: Float, val lon: Float)
-@Serializable
-data class PortListInfo(val contenu: List<PortListPort>)
-
-data class ResultMareeInfo(val dayOffset: Int, val hour: Int, val minutes: Int, val height: Float)
-data class FullDataResult(val portName: String,
-                          val waterTemperatureInDegrees: Int,
-                          val coefMin: Int,
-                          val coefMax: Int,
-                          val results: List<ResultMareeInfo>)
-
-
 class MareeInfoApi(private val context: Context,
                    lat: Float = 0F,
                    lon: Float = 0F) {
+    @Serializable
+    private data class PortInfoEtale(val datetime: String, val hauteur: Float, val type_etale: String, val coef: Int = -1)
+    @Serializable
+    private data class PortInfoMaree(val datetime: String, val lieu: String, val etales: List<PortInfoEtale>)
+    @Serializable
+    private data class PortInfoPrevisDetail(val teau: Int)
+    @Serializable
+    private data class PortInfoPrevis(val detail: List<PortInfoPrevisDetail>)
+    @Serializable
+    private data class PortInfoContenu(val marees: List<PortInfoMaree>, val previs: PortInfoPrevis)
+    @Serializable
+    private data class PortInfo(val contenu: PortInfoContenu)
+
+    private data class FullDataResult(val portName: String,
+                              val waterTemperatureInDegrees: Int,
+                              val coefMin: Int,
+                              val coefMax: Int,
+                              val results: List<ResultMareeInfo>)
     private var mPortName: String = context.getString(R.string.default_port_name)
     private var mWaterTemperatureInDegrees = 0
     private var mCoefMin = -1

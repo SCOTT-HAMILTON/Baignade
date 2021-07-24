@@ -12,6 +12,9 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapListener
 import org.osmdroid.events.ScrollEvent
@@ -26,7 +29,6 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import kotlin.concurrent.timer
 
-
 class ConfigureBaignadeWidgetActivity : AppCompatActivity() {
     companion object {
         private const val EXTRA_APPWIDGET_ID_CUSTOM =
@@ -39,6 +41,62 @@ class ConfigureBaignadeWidgetActivity : AppCompatActivity() {
         private const val PREFS_NAME = "com.sample.baignade.ConfigureBaignadeWidgetActivity"
         private const val LAT_PREF_PREFIX = "pref_lat_"
         private const val LON_PREF_PREFIX = "pref_lon_"
+        private const val POINTS_PREF_PREFIX = "pref_points_"
+        private const val PORT_NAME_PREF_PREFIX = "pref_port_name_"
+        private const val WATER_TEMPERATURE_IN_DEGREES_PREF_PREFIX =
+            "pref_water_temperature_in_degrees_"
+        private const val COEF_MIN_PREF_PREFIX = "pref_coef_min_"
+        private const val COEF_MAX_PREF_PREFIX = "pref_coef_max"
+        fun savePortMetadataPreference(context: Context,
+                                       appWidgetId: Int,
+                                       portMetadata: PortMetadata) {
+            context.getSharedPreferences(PREFS_NAME, 0).edit().apply {
+                putString(PORT_NAME_PREF_PREFIX + appWidgetId, portMetadata.portName)
+                putInt(WATER_TEMPERATURE_IN_DEGREES_PREF_PREFIX + appWidgetId,
+                    portMetadata.waterTemperatureInDegrees)
+                putInt(COEF_MIN_PREF_PREFIX + appWidgetId, portMetadata.coefMin)
+                putInt(COEF_MAX_PREF_PREFIX + appWidgetId, portMetadata.coefMax)
+                commit()
+            }
+        }
+        fun loadPortMetadataPreference(context: Context, appWidgetId: Int): PortMetadata {
+            context.getSharedPreferences(PREFS_NAME, 0).run {
+                val portName = getString(PORT_NAME_PREF_PREFIX + appWidgetId, "") ?:
+                    context.getString(R.string.default_port_name)
+                val waterTemperatureInDegrees = getInt(
+                    WATER_TEMPERATURE_IN_DEGREES_PREF_PREFIX + appWidgetId, 0)
+                val coefMin = getInt(
+                    COEF_MIN_PREF_PREFIX + appWidgetId, 0)
+                val coefMax = getInt(
+                    COEF_MAX_PREF_PREFIX + appWidgetId, 0)
+                return PortMetadata(portName, waterTemperatureInDegrees, coefMin, coefMax)
+            }
+        }
+        fun savePointsPreference(context: Context,
+                                 appWidgetId: Int,
+                                 xVals: List<Float>,
+                                 yVals: List<Float>) {
+            if (xVals.isNotEmpty() && xVals.size == yVals.size) {
+                context.getSharedPreferences(PREFS_NAME, 0).edit().apply {
+                    putString(POINTS_PREF_PREFIX + appWidgetId,
+                        Json.encodeToString(xVals.zip(yVals)))
+                    commit()
+                }
+            } else {
+                println("Error, data is invalid, not saving it. xVals: $xVals, yVals: $yVals")
+            }
+        }
+        fun loadPointsPreference(context: Context,
+                                 appWidgetId: Int): XYSerie {
+            context.getSharedPreferences(PREFS_NAME, 0).run {
+                val strPoints = getString(POINTS_PREF_PREFIX + appWidgetId, "")
+                return if (strPoints?.isNotEmpty() == true) {
+                    Json.decodeFromString(strPoints)
+                } else {
+                    listOf()
+                }
+            }
+        }
         fun saveCoordinatesPreference(context: Context,
                                       appWidgetId: Int,
                                       coordinates: GeoPoint) {
@@ -49,14 +107,22 @@ class ConfigureBaignadeWidgetActivity : AppCompatActivity() {
             }
         }
         fun loadCoordinatesPreference(context: Context, appWidgetId: Int): GeoPoint {
-            val prefs = context.getSharedPreferences(PREFS_NAME, 0)
-            val lat = prefs.getFloat(LAT_PREF_PREFIX + appWidgetId, 0F)
-            val lon = prefs.getFloat(LON_PREF_PREFIX + appWidgetId, 0F)
-            return GeoPoint(lat.toDouble(), lon.toDouble())
+            context.getSharedPreferences(PREFS_NAME, 0).run {
+                val lat = getFloat(LAT_PREF_PREFIX + appWidgetId, 0F)
+                val lon = getFloat(LON_PREF_PREFIX + appWidgetId, 0F)
+                return GeoPoint(lat.toDouble(), lon.toDouble())
+            }
         }
-        fun deleteCoordinatesPreference(context: Context, appWidgetId: Int) {
+        fun deleteWidgetPreferences(context: Context, appWidgetId: Int) {
             val prefs = context.getSharedPreferences(PREFS_NAME, 0)
-            listOf(LAT_PREF_PREFIX, LON_PREF_PREFIX).forEach {
+            listOf(
+                LAT_PREF_PREFIX,
+                LON_PREF_PREFIX,
+                POINTS_PREF_PREFIX,
+                PORT_NAME_PREF_PREFIX,
+                WATER_TEMPERATURE_IN_DEGREES_PREF_PREFIX,
+                COEF_MIN_PREF_PREFIX,
+                COEF_MAX_PREF_PREFIX).forEach {
                 val key = it+appWidgetId
                 if (prefs.contains(key)) {
                     prefs.edit().remove(key).commit()
@@ -84,11 +150,6 @@ class ConfigureBaignadeWidgetActivity : AppCompatActivity() {
             return true
         }
     }
-//
-//    override fun onNewIntent(intent: Intent?) {
-//        println("NEW INTENT: $intent, extras: ${intent?.extras}")
-//        super.onNewIntent(intent)
-//    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         intent.extras?.also {
@@ -100,8 +161,11 @@ class ConfigureBaignadeWidgetActivity : AppCompatActivity() {
                     AppWidgetManager.INVALID_APPWIDGET_ID
                 )
             mActionIsUpdate = it.getBoolean(EXTRA_APPWIDGET_IS_UPDATE)
-            println("IS UPDATE: ${it.getBoolean(EXTRA_APPWIDGET_IS_UPDATE)}")
-            println("INTENT mAppWidgetId: $mAppWidgetId")
+            title = "Baignade"+if (BuildConfig.DEBUG) { " ($mAppWidgetId)" } else { "" }
+        }
+        if (mAppWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
+            setResult(RESULT_OK, Intent())
+            finish()
         }
         setContentView(R.layout.activity_configure_baignade_widget)
         Configuration.getInstance().userAgentValue = USER_AGENT
@@ -124,11 +188,6 @@ class ConfigureBaignadeWidgetActivity : AppCompatActivity() {
             }
         })
 
-        if (mAppWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
-            println("INVALID intent: $mAppWidgetId")
-            setResult(RESULT_OK, Intent())
-            finish()
-        }
     }
     private fun clearMarkers() {
         runBlocking {
@@ -220,11 +279,12 @@ class ConfigureBaignadeWidgetActivity : AppCompatActivity() {
             val appWidgetManager = AppWidgetManager.getInstance(this)
             thread {
                 CoroutineScope(Dispatchers.Default).launch {
+                    println("Updating Widget with previous data: $mAppWidgetId")
                     BaignadeWidgetProvider.updateAppWidget(
                         this@ConfigureBaignadeWidgetActivity,
                         appWidgetManager,
                         mAppWidgetId,
-//                        usePreviousDataIfAvailable =  true
+                        true
                     )
                 }
             }

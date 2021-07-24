@@ -3,10 +3,9 @@ package com.sample.baignade
 import kotlin.math.PI
 import kotlin.math.cos
 
-typealias XYSerie = List<Pair<Float, Float>>
-data class Sinusoid(val D: List<Float>, val A: List<Float>, val B: List<Float>, val C: List<Float>)
 
 class SinusoidBuilder(private val points: XYSerie) {
+    private data class Sinusoid(val D: List<Float>, val A: List<Float>, val B: List<Float>, val C: List<Float>)
     private fun linspace(start: Float, stop: Float,  num: Int = 50, endpoint: Boolean = true): List<Float> {
         if (num == 1) {
             return listOf(stop)

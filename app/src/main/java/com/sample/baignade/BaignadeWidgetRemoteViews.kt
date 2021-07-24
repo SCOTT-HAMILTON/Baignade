@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
+import android.content.Intent.FLAG_ACTIVITY_NEW_TASK
 import android.graphics.Color
 import android.os.Build
 import android.util.DisplayMetrics
@@ -38,13 +39,10 @@ class BaignadeWidgetRemoteViews(packageName: String, layoutId: Int):
         }
     }
     fun updateViews(context: Context,
-                                  appWidgetId: Int,
-                                  xVals: List<Float>,
-                                  yVals: List<Float>,
-                                  portName: String,
-                                  waterTemperatureInDegrees: Int,
-                                  coefMin: Int,
-                                  coefMax: Int) {
+                    appWidgetId: Int,
+                    points: XYSerie,
+                    portMetadata: PortMetadata) {
+        val (xVals, _) = points.unzip()
         val w = dpToPix(context, 335F)
         val h = dpToPix(context, 300F)
 
@@ -57,7 +55,6 @@ class BaignadeWidgetRemoteViews(packageName: String, layoutId: Int):
         if (view == null) {
             return
         }
-        val points: XYSerie = xVals.zip(yVals)
         val (sinusoidXVals, sinusoidYVals) = SinusoidBuilder(points).getSinusoidal().unzip()
         val graph: LineGraph = view.findViewById(R.id.graph)
 
@@ -76,10 +73,12 @@ class BaignadeWidgetRemoteViews(packageName: String, layoutId: Int):
             ?.times(1.2F) ?: 10F
         graph.dateAxisTicks = ArrayList(xVals.map { (it*60L*1000L).toLong() }
             .dropLast(1))
-        graph.title = context.getString(R.string.graphTitle)+" ($appWidgetId)"
-        graph.subtitle = portName
-        graph.legendSubtitle = "$waterTemperatureInDegrees°C"
-        graph.legendSubsubtitle = "$coefMin-$coefMax"
+        graph.title = context.getString(R.string.graphTitle) + if (BuildConfig.DEBUG) {
+            " ($appWidgetId)"
+        } else { "" }
+        graph.subtitle = portMetadata.portName
+        graph.legendSubtitle = "${portMetadata.waterTemperatureInDegrees}°C"
+        graph.legendSubsubtitle = "${portMetadata.coefMin}-${portMetadata.coefMax}"
         graph.dataCopyright = context.getString(R.string.data_credits_text)
 
         val currentTime = Calendar.getInstance()
@@ -117,21 +116,21 @@ class BaignadeWidgetRemoteViews(packageName: String, layoutId: Int):
                 val height = 500
                 val scaledPreviewImage = previewImage.scale((height * imageRation).toInt(), height)
                 setImageViewBitmap(R.id.imgView, scaledPreviewImage)
-//                appWidgetManager.updateAppWidget(appWidgetId, remoteViews)
             }
         }
     }
     fun setOpenConfigureOnClick(context: Context,
-                                        appWidgetId: Int) {
+                                appWidgetId: Int) {
         println("\n\nSetting On New On Click Listener for Widget $appWidgetId")
         val intent = Intent(context, ConfigureBaignadeWidgetActivity::class.java).apply {
-            action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+            action = AppWidgetManager.ACTION_APPWIDGET_CONFIGURE
             putExtra(EXTRA_APPWIDGET_ID_CUSTOM, appWidgetId)
             putExtra(EXTRA_APPWIDGET_IS_UPDATE, true)
+            flags = FLAG_ACTIVITY_NEW_TASK
         }
-//            println("Pending Intent: ${intent.extras}")
-        val pendingIntent = PendingIntent.getActivity(context, nextInt(0, 10_000), intent,
-            PendingIntent.FLAG_UPDATE_CURRENT
+        val rc = nextInt(0, 10_000)
+        val pendingIntent = PendingIntent.getActivity(context, rc, intent,
+        PendingIntent.FLAG_UPDATE_CURRENT
         )
         setOnClickPendingIntent(R.id.imgView, pendingIntent)
     }
