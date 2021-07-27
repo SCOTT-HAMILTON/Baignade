@@ -105,6 +105,7 @@ class BaignadeWidgetRemoteViews(packageName: String, layoutId: Int):
     }
     fun updateViewsWithLoadingImage(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            println("Updating Views With Loading Image")
             val drawable = context.resources.getDrawableForDensity(
                 R.mipmap.ic_baignade_widget_preview,
                 DisplayMetrics.DENSITY_XXXHIGH,

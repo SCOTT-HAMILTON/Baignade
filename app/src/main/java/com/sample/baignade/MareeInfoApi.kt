@@ -9,6 +9,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import java.io.IOException
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
@@ -51,6 +52,7 @@ class MareeInfoApi(private val context: Context,
 //    private var url2: String =
 //        "$DOMAIN/meteoconsultmarine/android/100/fr/v20/previsionsSpot.php?lat=$lat&lon=$lon"
     private fun getJson(strUrl: String): String {
+        println("Get Json From Url: $strUrl")
         val url = URL(strUrl)
         val httpConn: HttpURLConnection = url.openConnection() as HttpURLConnection
         httpConn.requestMethod = "GET"
@@ -59,12 +61,17 @@ class MareeInfoApi(private val context: Context,
             "Application Android Baignade développées par Scott Hamilton <sgn.hamilton+baignade@protonmail.com>"
         )
         httpConn.setRequestProperty("Accept", "application/json")
-        val responseStream: InputStream =
-            if (httpConn.responseCode / 100 == 2) httpConn.inputStream else httpConn.errorStream
-        val s: Scanner = Scanner(responseStream).useDelimiter("\\A")
-        val response = if (s.hasNext()) s.next() else ""
-        println("Answer from request url $strUrl: $response")
-        return response
+        try {
+            val responseStream: InputStream =
+                if (httpConn.responseCode / 100 == 2) httpConn.inputStream else httpConn.errorStream
+            val s: Scanner = Scanner(responseStream).useDelimiter("\\A")
+            val response = if (s.hasNext()) s.next() else ""
+            println("Answer from request url $strUrl: $response")
+            return response
+        } catch (e: IOException) {
+            println("error: $e")
+            return ""
+        }
     }
     fun getPortName(): String {
         return mPortName.substringBefore('©').substringBefore(" - ")
@@ -84,13 +91,18 @@ class MareeInfoApi(private val context: Context,
         return runBlocking {
             return@runBlocking withContext(coroutineContext) {
                 return@withContext async(Dispatchers.IO) {
-                    val info = mJson.decodeFromString<PortListInfo>(getJson(portListUrl))
-                    return@async info.contenu
+                    try {
+                        val info = mJson.decodeFromString<PortListInfo>(getJson(portListUrl))
+                        return@async info.contenu
+                    } catch (e: IllegalArgumentException) {
+                        return@async listOf()
+                    }
                 }.await()
             }
         }
     }
     fun getPortInformation(): List<ResultMareeInfo> {
+        try {
         val result = runBlocking {
             return@runBlocking withContext(coroutineContext) {
                 return@withContext async(Dispatchers.IO) {
@@ -142,5 +154,8 @@ class MareeInfoApi(private val context: Context,
         mCoefMin = result.coefMin
         mCoefMax = result.coefMax
         return result.results
+        } catch (e: IllegalArgumentException) {
+            return listOf()
+        }
     }
 }

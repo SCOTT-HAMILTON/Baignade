@@ -8,4 +8,5 @@
     <string name="alert_choose_port_title">Do you want to choose this port ?</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
+    <string name="fetch_port_list_toast_error">Couldn\'t fetch port list, please check your internet connection</string>
 </resources>

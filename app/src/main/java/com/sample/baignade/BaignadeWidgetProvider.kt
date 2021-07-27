@@ -32,6 +32,7 @@ class BaignadeWidgetProvider : AppWidgetProvider() {
                          appWidgetId: Int,
                          usePreviousDataIfAvailable: Boolean = false
         ) {
+            println("Updating App Widget: $appWidgetId, usePreviousData = $usePreviousDataIfAvailable")
             val remoteViews = BaignadeWidgetRemoteViews(
                 context.packageName, R.layout.baignade_widget)
             remoteViews.setOpenConfigureOnClick(context, appWidgetId)
@@ -42,19 +43,14 @@ class BaignadeWidgetProvider : AppWidgetProvider() {
                     .loadPortMetadataPreference(context, appWidgetId)
                 points to portMetadata
             } else {
-                val (points, portMetaData) = runBlocking {
-                    withContext(Dispatchers.Default) {
-                        async {
-                            remoteViews.updateViewsWithLoadingImage(context)
-                            appWidgetManager.updateAppWidget(appWidgetId, remoteViews)
-                        }
-                    }
-                    val coordinates =
-                        ConfigureBaignadeWidgetActivity.loadCoordinatesPreference(context, appWidgetId)
-                    if (coordinates == GeoPoint(0.0, 0.0)) {
-                        return@runBlocking (listOf<Float>() to listOf<Float>()) to
-                                PortMetadata("", 0, 0, 0)
-                    }
+                remoteViews.updateViewsWithLoadingImage(context)
+                appWidgetManager.updateAppWidget(appWidgetId, remoteViews)
+                val coordinates =
+                    ConfigureBaignadeWidgetActivity.loadCoordinatesPreference(context, appWidgetId)
+                if (coordinates == GeoPoint(0.0, 0.0)) {
+                    (listOf<Float>() to listOf<Float>()) to
+                            PortMetadata("", 0, 0, 0)
+                } else {
                     val mareeInfoApi = MareeInfoApi(
                         context,
                         coordinates.latitude.toFloat(),
@@ -66,21 +62,30 @@ class BaignadeWidgetProvider : AppWidgetProvider() {
                         mareeInfoApi.getWaterTemperatureInDegrees(),
                         mareeInfoApi.getCoefMin(),
                         mareeInfoApi.getCoefMax())
-                    return@runBlocking points to portMetaData
+                    if (points.first.isEmpty() || points.second.isEmpty() ||
+                        points.first.size != points.second.size) {
+                        updateAppWidget(context, appWidgetManager, appWidgetId, usePreviousDataIfAvailable = true)
+                        return
+                    }
+                    points to portMetaData
                 }
-                ConfigureBaignadeWidgetActivity.savePointsPreference(
-                    context,appWidgetId, points.first, points.second)
-                ConfigureBaignadeWidgetActivity.savePortMetadataPreference(
-                    context, appWidgetId, portMetaData)
-                points to portMetaData
             }
-            remoteViews.updateViews(
-                context,
-                appWidgetId,
-                points.first.zip(points.second),
-                portMetaData
-            )
-            appWidgetManager.updateAppWidget(appWidgetId, remoteViews)
+            if (points.first.isNotEmpty() && points.second.isNotEmpty() &&
+                points.first.size == points.second.size ) {
+                ConfigureBaignadeWidgetActivity.savePointsPreference(
+                    context, appWidgetId, points.first, points.second
+                )
+                ConfigureBaignadeWidgetActivity.savePortMetadataPreference(
+                    context, appWidgetId, portMetaData
+                )
+                remoteViews.updateViews(
+                    context,
+                    appWidgetId,
+                    points.first.zip(points.second),
+                    portMetaData
+                )
+                appWidgetManager.updateAppWidget(appWidgetId, remoteViews)
+            }
         }
     }
     override fun onUpdate(

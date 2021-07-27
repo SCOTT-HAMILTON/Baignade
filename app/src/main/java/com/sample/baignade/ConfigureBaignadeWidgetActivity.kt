@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock.uptimeMillis
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
@@ -217,9 +218,18 @@ class ConfigureBaignadeWidgetActivity : AppCompatActivity() {
                 }
                 val ports =
                     mareeInfoApi.getPortList(center.latitude.toFloat(), center.longitude.toFloat())
-                clearMarkers()
-                ports.forEach {
-                    addMarker(map, GeoPoint(it.lat.toDouble(), it.lon.toDouble()), it.nom)
+                if (ports.isEmpty()) {
+                    runOnUiThread {
+                        Toast.makeText(
+                            this, getString(R.string.fetch_port_list_toast_error),
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                } else {
+                    clearMarkers()
+                    ports.forEach {
+                        addMarker(map, GeoPoint(it.lat.toDouble(), it.lon.toDouble()), it.nom)
+                    }
                 }
                 mPortUpdateAlreadyRunning.set(false)
             }
@@ -245,13 +255,12 @@ class ConfigureBaignadeWidgetActivity : AppCompatActivity() {
                         val appWidgetManager = AppWidgetManager.getInstance(this)
                         saveCoordinatesPreference(this, mAppWidgetId, markerPos)
                         thread {
-                            CoroutineScope(Dispatchers.Default).launch {
-                                BaignadeWidgetProvider.updateAppWidget(
-                                    this@ConfigureBaignadeWidgetActivity,
-                                    appWidgetManager,
-                                    mAppWidgetId
-                                )
-                            }
+                            println("LAUNCHING UPDATE APP WIDGET $mAppWidgetId")
+                            BaignadeWidgetProvider.updateAppWidget(
+                                this@ConfigureBaignadeWidgetActivity,
+                                appWidgetManager,
+                                mAppWidgetId
+                            )
                         }
                         val resultValue = Intent()
                         resultValue.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, mAppWidgetId)
