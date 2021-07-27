@@ -25,12 +25,18 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import java.io.IOException
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import kotlin.concurrent.timer
 
 class ConfigureBaignadeWidgetActivity : AppCompatActivity() {
+    class InvalidPreferenceException: IOException()
     companion object {
         private const val EXTRA_APPWIDGET_ID_CUSTOM =
             "appWidgetIdCustom"
@@ -47,7 +53,42 @@ class ConfigureBaignadeWidgetActivity : AppCompatActivity() {
         private const val WATER_TEMPERATURE_IN_DEGREES_PREF_PREFIX =
             "pref_water_temperature_in_degrees_"
         private const val COEF_MIN_PREF_PREFIX = "pref_coef_min_"
-        private const val COEF_MAX_PREF_PREFIX = "pref_coef_max"
+        private const val COEF_MAX_PREF_PREFIX = "pref_coef_max_"
+        private const val LAST_FETCH_PREF_PREFIX = "pref_last_fetch_"
+
+        fun saveLastFetchPreference(context: Context,
+                                    appWidgetId: Int,
+                                    fetchTime: LocalDateTime
+        ) {
+            context.getSharedPreferences(PREFS_NAME, 0).edit().apply {
+                val strTime = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    fetchTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                } else {
+                    TODO("VERSION.SDK_INT < O")
+                }
+                putString(LAST_FETCH_PREF_PREFIX + appWidgetId, strTime)
+                commit()
+            }
+        }
+        fun loadLastFetchPreference(context: Context, appWidgetId: Int): LocalDateTime {
+            context.getSharedPreferences(PREFS_NAME, 0).run {
+                return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    val timeStr = getString(LAST_FETCH_PREF_PREFIX + appWidgetId, "")
+                    if (timeStr?.isEmpty() == true) {
+                        throw InvalidPreferenceException()
+                    }
+                    try {
+                        LocalDateTime.parse(
+                            timeStr,
+                            DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                    } catch (e: DateTimeParseException) {
+                        throw InvalidPreferenceException()
+                    }
+                } else {
+                    TODO("VERSION.SDK_INT < O")
+                }
+            }
+        }
         fun savePortMetadataPreference(context: Context,
                                        appWidgetId: Int,
                                        portMetadata: PortMetadata) {
@@ -116,6 +157,7 @@ class ConfigureBaignadeWidgetActivity : AppCompatActivity() {
         }
         fun deleteWidgetPreferences(context: Context, appWidgetId: Int) {
             val prefs = context.getSharedPreferences(PREFS_NAME, 0)
+            val prefsEditor = prefs.edit()
             listOf(
                 LAT_PREF_PREFIX,
                 LON_PREF_PREFIX,
@@ -123,12 +165,14 @@ class ConfigureBaignadeWidgetActivity : AppCompatActivity() {
                 PORT_NAME_PREF_PREFIX,
                 WATER_TEMPERATURE_IN_DEGREES_PREF_PREFIX,
                 COEF_MIN_PREF_PREFIX,
-                COEF_MAX_PREF_PREFIX).forEach {
+                COEF_MAX_PREF_PREFIX,
+                LAST_FETCH_PREF_PREFIX).forEach {
                 val key = it+appWidgetId
                 if (prefs.contains(key)) {
-                    prefs.edit().remove(key).commit()
+                    prefsEditor.remove(key)
                 }
             }
+            prefsEditor.commit()
         }
     }
     private var mAppWidgetId: Int = AppWidgetManager.INVALID_APPWIDGET_ID

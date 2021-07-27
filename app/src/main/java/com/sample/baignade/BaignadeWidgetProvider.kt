@@ -5,13 +5,19 @@ import android.appwidget.AppWidgetManager.*
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import kotlinx.coroutines.*
 import org.osmdroid.util.GeoPoint
+import java.time.LocalDate
+import java.time.LocalDateTime
 import java.util.*
 import kotlin.concurrent.thread
 
 class BaignadeWidgetProvider : AppWidgetProvider() {
     companion object {
+        fun Pair<List<Float>, List<Float>>.isValid(): Boolean {
+            return first.isNotEmpty() && first.size == second.size
+        }
         private fun getMareeInfos(mareeInfoApi: MareeInfoApi): Pair<List<Float>, List<Float>> {
             val mareeInfoResults = mareeInfoApi.getPortInformation()
             val subList5OrLess = if (mareeInfoResults.size > 6) {
@@ -62,16 +68,22 @@ class BaignadeWidgetProvider : AppWidgetProvider() {
                         mareeInfoApi.getWaterTemperatureInDegrees(),
                         mareeInfoApi.getCoefMin(),
                         mareeInfoApi.getCoefMax())
-                    if (points.first.isEmpty() || points.second.isEmpty() ||
-                        points.first.size != points.second.size) {
+                    if (!points.isValid()) {
                         updateAppWidget(context, appWidgetManager, appWidgetId, usePreviousDataIfAvailable = true)
                         return
+                    } else {
+                        val currentTime = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            LocalDateTime.now()
+                        } else {
+                            TODO("VERSION.SDK_INT < O")
+                        }
+                        ConfigureBaignadeWidgetActivity.saveLastFetchPreference(
+                            context, appWidgetId, currentTime)
+                        points to portMetaData
                     }
-                    points to portMetaData
                 }
             }
-            if (points.first.isNotEmpty() && points.second.isNotEmpty() &&
-                points.first.size == points.second.size ) {
+            if (points.isValid()) {
                 ConfigureBaignadeWidgetActivity.savePointsPreference(
                     context, appWidgetId, points.first, points.second
                 )
@@ -98,7 +110,21 @@ class BaignadeWidgetProvider : AppWidgetProvider() {
             // Create an Intent to launch ExampleActivity
             thread {
                 CoroutineScope(Dispatchers.Default).launch {
-                    updateAppWidget(context, appWidgetManager, appWidgetId)
+                    val usePreviousDataIfAvailable = try {
+                        val lastFetchTime = ConfigureBaignadeWidgetActivity.loadLastFetchPreference(
+                            context, appWidgetId
+                        )
+                        val currentTime = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            LocalDateTime.now()
+                        } else {
+                            TODO("VERSION.SDK_INT < O")
+                        }
+                        currentTime.minusHours(3) >= lastFetchTime
+                    } catch (e: ConfigureBaignadeWidgetActivity.InvalidPreferenceException) {
+                        false
+                    }
+                    updateAppWidget(context, appWidgetManager, appWidgetId,
+                        usePreviousDataIfAvailable)
                 }
             }
         }
