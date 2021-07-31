@@ -17,6 +17,8 @@ import androidx.core.view.drawToBitmap
 import com.velli20.materialunixgraph.Line
 import com.velli20.materialunixgraph.LineGraph
 import com.velli20.materialunixgraph.LinePoint
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.math.absoluteValue
 import kotlin.random.Random.Default.nextInt
@@ -41,7 +43,8 @@ class BaignadeWidgetRemoteViews(packageName: String, layoutId: Int):
     fun updateViews(context: Context,
                     appWidgetId: Int,
                     points: XYSerie,
-                    portMetadata: PortMetadata) {
+                    portMetadata: PortMetadata,
+                    debug: Boolean = false) {
         val (xVals, _) = points.unzip()
         val w = dpToPix(context, 335F)
         val h = dpToPix(context, 300F)
@@ -77,10 +80,24 @@ class BaignadeWidgetRemoteViews(packageName: String, layoutId: Int):
             " ($appWidgetId)"
         } else { "" }
         graph.subtitle = portMetadata.portName
-        graph.legendSubtitle = "${portMetadata.waterTemperatureInDegrees}°C"
-        graph.legendSubsubtitle = "${portMetadata.coefMin}-${portMetadata.coefMax}"
-        graph.dataCopyright = context.getString(R.string.data_credits_text)
-
+        if (!debug) {
+            graph.legendSubtitle = "${portMetadata.waterTemperatureInDegrees}°C"
+            graph.legendSubsubtitle = "${portMetadata.coefMin}-${portMetadata.coefMax}"
+            graph.dataCopyright = context.getString(R.string.data_credits_text)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val lastFetchTime = ConfigureBaignadeWidgetActivity.loadLastFetchPreference(
+                context, appWidgetId
+            )
+            val currentTime = LocalDateTime.now()
+            val formatter = DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm")
+            graph.legendSubsubtitle = "${lastFetchTime.format(formatter)}"
+            graph.legendSubtitle = "${currentTime.format(formatter)} " +
+            if (currentTime.minusHours(3) >= lastFetchTime) {
+                "Needed new update"
+            } else {
+                "Too early for update"
+            }
+        }
         val currentTime = Calendar.getInstance()
         val hours = currentTime.get(Calendar.HOUR_OF_DAY)
         val minutes = currentTime.get(Calendar.MINUTE)

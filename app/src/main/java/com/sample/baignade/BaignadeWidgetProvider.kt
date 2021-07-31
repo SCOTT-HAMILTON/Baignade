@@ -1,17 +1,14 @@
 package com.sample.baignade
 
 import android.appwidget.AppWidgetManager
-import android.appwidget.AppWidgetManager.*
 import android.appwidget.AppWidgetProvider
 import android.content.Context
-import android.content.Intent
 import android.os.Build
+import android.widget.Toast
 import kotlinx.coroutines.*
 import org.osmdroid.util.GeoPoint
-import java.time.LocalDate
 import java.time.LocalDateTime
-import java.util.*
-import kotlin.concurrent.thread
+import java.time.format.DateTimeFormatter
 
 class BaignadeWidgetProvider : AppWidgetProvider() {
     companion object {
@@ -34,10 +31,31 @@ class BaignadeWidgetProvider : AppWidgetProvider() {
             return xVals to yVals
         }
         fun updateAppWidget(context: Context,
-                         appWidgetManager: AppWidgetManager,
-                         appWidgetId: Int,
-                         usePreviousDataIfAvailable: Boolean = false
-        ) {
+                            appWidgetManager: AppWidgetManager,
+                            appWidgetId: Int,
+                            forceUsePreviousDataIfAvailable: Boolean = false) {
+            val usePreviousDataIfAvailable = if (forceUsePreviousDataIfAvailable) {
+                true
+            } else {
+                try {
+                    val formatter = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm")
+                    } else {
+                        TODO("VERSION.SDK_INT < O")
+                    }
+                    val lastFetchTime = ConfigureBaignadeWidgetActivity.loadLastFetchPreference(
+                        context, appWidgetId
+                    )
+                    val currentTime = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        LocalDateTime.now()
+                    } else {
+                        TODO("VERSION.SDK_INT < O")
+                    }
+                    currentTime.minusHours(3) < lastFetchTime
+                } catch (e: ConfigureBaignadeWidgetActivity.InvalidPreferenceException) {
+                    false
+                }
+            }
             println("Updating App Widget: $appWidgetId, usePreviousData = $usePreviousDataIfAvailable")
             val remoteViews = BaignadeWidgetRemoteViews(
                 context.packageName, R.layout.baignade_widget)
@@ -69,7 +87,10 @@ class BaignadeWidgetProvider : AppWidgetProvider() {
                         mareeInfoApi.getCoefMin(),
                         mareeInfoApi.getCoefMax())
                     if (!points.isValid()) {
-                        updateAppWidget(context, appWidgetManager, appWidgetId, usePreviousDataIfAvailable = true)
+                        CoroutineScope(Dispatchers.Main).launch {
+                            Toast.makeText(context, "Points are invalid", Toast.LENGTH_LONG).show()
+                        }
+                        updateAppWidget(context, appWidgetManager, appWidgetId, forceUsePreviousDataIfAvailable = true)
                         return
                     } else {
                         val currentTime = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -108,24 +129,8 @@ class BaignadeWidgetProvider : AppWidgetProvider() {
         // Perform this loop procedure for each App Widget that belongs to this provider
         appWidgetIds.forEach { appWidgetId ->
             // Create an Intent to launch ExampleActivity
-            thread {
-                CoroutineScope(Dispatchers.Default).launch {
-                    val usePreviousDataIfAvailable = try {
-                        val lastFetchTime = ConfigureBaignadeWidgetActivity.loadLastFetchPreference(
-                            context, appWidgetId
-                        )
-                        val currentTime = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            LocalDateTime.now()
-                        } else {
-                            TODO("VERSION.SDK_INT < O")
-                        }
-                        currentTime.minusHours(3) >= lastFetchTime
-                    } catch (e: ConfigureBaignadeWidgetActivity.InvalidPreferenceException) {
-                        false
-                    }
-                    updateAppWidget(context, appWidgetManager, appWidgetId,
-                        usePreviousDataIfAvailable)
-                }
+            CoroutineScope(Dispatchers.Main).launch {
+                updateAppWidget(context, appWidgetManager, appWidgetId)
             }
         }
     }
