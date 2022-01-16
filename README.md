@@ -13,7 +13,7 @@ The SHOM provides a wide range of ports, so big that we can't visualize them all
 
 ## Screens
 **Configure Page**
-![configure-lowres](https://user-images.githubusercontent.com/24496705/126784906-610dc676-5973-438f-8b4b-d731948494a1.jpg)
+![configure-lowres](https://user-images.githubusercontent.com/24496705/149673148-e7094b70-3eeb-4d72-9f9d-504358c278f5.gif)
 
 **Final Configured Widget**
 ![final-lowres](https://user-images.githubusercontent.com/24496705/126784899-e725f207-66f2-4ab3-8607-75921816a251.jpg)
